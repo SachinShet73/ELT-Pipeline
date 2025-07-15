@@ -1,0 +1,10 @@
+version: '3'
+
+services:
+  source_postgres:
+    image:postgres:latest
+    ports:
+      -"5433:5432"
+    networks:
+      - elt_network
+  
