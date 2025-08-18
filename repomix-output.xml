@@ -52,6 +52,7 @@ custom_postgres/
       films.sql
       schema.yml
       sources.yml
+    specific_movie.sql
   .gitignore
   dbt_project.yml
   README.md
@@ -66,47 +67,22 @@ docker-compose.yml
 <files>
 This section contains the contents of the repository's files.
 
+<file path="custom_postgres/models/specific_movie.sql">
+{% set film_title = 'Dunkirk' %}
+
+SELECT *
+FROM {{ ref('films')}}
+WHERE title = '{{ film_title }}'
+</file>
+
 <file path="custom_postgres/macros/ratings_macro.sql">
-{{% generate_ratings() %}}
+{% macro generate_ratings() %}
         CASE 
             WHEN user_rating >= 4.5 THEN 'Excellent'
             WHEN user_rating >= 4.0 THEN 'Good'
             WHEN user_rating >= 3.0 THEN 'Average'
             ELSE 'Poor'
         END as rating_category
-{{  endmacro }}
-</file>
-
-<file path="custom_postgres/macros/film_ratings_macro.sql">
-{% macro generate_film_ratings() %}
-WITH film_with_ratings AS (
-    SELECT
-        film_id,
-        title,
-        release_date,
-        price,
-        rating,
-        user_rating,
-        {{ generate_ratings()}}
-    FROM {{ ref('films') }}
-),
-
-films_with_actors AS (
-    SELECT
-        f.film_id,
-        f.title,
-        STRING_AGG(a.actor_name, ',') as actors
-    FROM {{ ref('films') }} f 
-    LEFT JOIN {{ ref('film_actors') }} fa ON f.film_id = fa.film_id
-    LEFT JOIN {{ ref('actors') }} a ON fa.actor_id = a.actor_id
-    GROUP BY f.film_id, f.title
-)
-
-SELECT
-    fwr.*,
-    fwa.actors
-FROM film_with_ratings fwr
-LEFT JOIN films_with_actors fwa ON fwr.film_id = fwa.film_id
 {% endmacro %}
 </file>
 
@@ -132,6 +108,39 @@ Try running the following commands:
 - Join the [chat](https://community.getdbt.com/) on Slack for live discussions and support
 - Find [dbt events](https://events.getdbt.com) near you
 - Check out [the blog](https://blog.getdbt.com/) for the latest news on dbt's development and best practices
+</file>
+
+<file path="custom_postgres/macros/film_ratings_macro.sql">
+{% macro generate_film_ratings() %}
+WITH film_with_ratings AS (
+    SELECT
+        film_id,
+        title,
+        release_date,
+        price,
+        rating,
+        user_rating,
+        {{ generate_ratings() }}
+    FROM {{ ref('films') }}
+),
+
+films_with_actors AS (
+    SELECT
+        f.film_id,
+        f.title,
+        STRING_AGG(a.actor_name, ',') as actors
+    FROM {{ ref('films') }} f 
+    LEFT JOIN {{ ref('film_actors') }} fa ON f.film_id = fa.film_id
+    LEFT JOIN {{ ref('actors') }} a ON fa.actor_id = a.actor_id
+    GROUP BY f.film_id, f.title
+)
+
+SELECT
+    fwr.*,
+    fwa.actors
+FROM film_with_ratings fwr
+LEFT JOIN films_with_actors fwa ON fwr.film_id = fwa.film_id
+{% endmacro %}
 </file>
 
 <file path="elt/elt_script.py">
