@@ -28,7 +28,7 @@ services:
 
   elt_script:
     build:
-      context: .
+      context: ./elt_script
       dockerfile: Dockerfile
     command: ["python", "elt_script.py"]
     networks:
@@ -38,5 +38,5 @@ services:
       - destination_postgres
 
 networks:
-  elt_network:no
+  elt_network:
     driver: bridge

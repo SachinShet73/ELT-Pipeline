@@ -51,10 +51,12 @@ custom_postgres/
   .gitignore
   dbt_project.yml
   README.md
+elt/
+  Dockerfile
+  elt_script.py
+source_db_init/
+  init.sql
 docker-compose.yml
-Dockerfile
-elt_script.py
-init.sql
 </directory_structure>
 
 <files>
@@ -276,52 +278,90 @@ Try running the following commands:
 - Check out [the blog](https://blog.getdbt.com/) for the latest news on dbt's development and best practices
 </file>
 
-<file path="docker-compose.yml">
-version: '3'
+<file path="elt/elt_script.py">
+import subprocess
+import time
 
-services:
-  source_postgres:
-    image: postgres:latest
-    ports:
-      - "5432:5432"
-    networks:
-      - elt_network
-    environment:
-      POSTGRES_DB: source_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: secret
-    volumes:
-      
-       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
-  destination_postgres:
-    image: postgres:latest
-    ports:
-      - "5433:5432"
-    networks:
-      - elt_network
-    environment:
-      POSTGRES_DB: destination_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: secret
+def wait_for_postgres(host, max_retries=5, delay_seconds=5):
+    """Wait for PostgreSQL to become available."""
+    retries = 0
+    while retries < max_retries:
+        try:
+            result = subprocess.run(
+                ["pg_isready", "-h", host], check=True, capture_output=True, text=True)
+            if "accepting connections" in result.stdout:
+                print("Successfully connected to PostgreSQL!")
+                return True
+        except subprocess.CalledProcessError as e:
+            print(f"Error connecting to PostgreSQL: {e}")
+            retries += 1
+            print(
+                f"Retrying in {delay_seconds} seconds... (Attempt {retries}/{max_retries})")
+            time.sleep(delay_seconds)
+    print("Max retries reached. Exiting.")
+    return False
 
-  elt_script:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: ["python", "elt_script.py"]
-    networks:
-      - elt_network
-    depends_on:
-      - source_postgres
-      - destination_postgres
 
-networks:
-  elt_network:
-    driver: bridge
+# Use the function before running the ELT process
+if not wait_for_postgres(host="source_postgres"):
+    exit(1)
+
+print("Starting ELT script...")
+
+# Configuration for the source PostgreSQL database
+source_config = {
+    'dbname': 'source_db',
+    'user': 'postgres',
+    'password': 'secret',
+    # Use the service name from docker-compose as the hostname
+    'host': 'source_postgres'
+}
+
+# Configuration for the destination PostgreSQL database
+destination_config = {
+    'dbname': 'destination_db',
+    'user': 'postgres',
+    'password': 'secret',
+    # Use the service name from docker-compose as the hostname
+    'host': 'destination_postgres'
+}
+
+# Use pg_dump to dump the source database to a SQL file
+dump_command = [
+    'pg_dump',
+    '-h', source_config['host'],
+    '-U', source_config['user'],
+    '-d', source_config['dbname'],
+    '-f', 'data_dump.sql',
+    '-w'  # Do not prompt for password
+]
+
+# Set the PGPASSWORD environment variable to avoid password prompt
+subprocess_env = dict(PGPASSWORD=source_config['password'])
+
+# Execute the dump command
+subprocess.run(dump_command, env=subprocess_env, check=True)
+
+# Use psql to load the dumped SQL file into the destination database
+load_command = [
+    'psql',
+    '-h', destination_config['host'],
+    '-U', destination_config['user'],
+    '-d', destination_config['dbname'],
+    '-a', '-f', 'data_dump.sql'
+]
+
+# Set the PGPASSWORD environment variable for the destination database
+subprocess_env = dict(PGPASSWORD=destination_config['password'])
+
+# Execute the load command
+subprocess.run(load_command, env=subprocess_env, check=True)
+
+print("Ending ELT script...")
 </file>
 
-<file path="init.sql">
+<file path="source_db_init/init.sql">
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     first_name VARCHAR(50),
@@ -480,105 +520,60 @@ INSERT INTO film_actors (film_id, actor_id) VALUES
 (20, 20);
 </file>
 
-<file path="Dockerfile">
+<file path="docker-compose.yml">
+version: '3'
+
+services:
+  source_postgres:
+    image: postgres:latest
+    ports:
+      - "5433:5432"
+    networks:
+      - elt_network
+    environment:
+      POSTGRES_DB: source_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+    volumes:
+      
+       - ./source_db_init/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  destination_postgres:
+    image: postgres:latest
+    ports:
+      - "5434:5432"
+    networks:
+      - elt_network
+    environment:
+      POSTGRES_DB: destination_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+
+  elt_script:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["python", "elt_script.py"]
+    networks:
+      - elt_network
+    depends_on:
+      - source_postgres
+      - destination_postgres
+
+networks:
+  elt_network:no
+    driver: bridge
+</file>
+
+<file path="elt/Dockerfile">
 FROM python:3.8-slim
 
 # Install PostgreSQL 17 client tools
-RUN apt-get update && \
-    apt-get install -y wget ca-certificates lsb-release gnupg && \
-    sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list' && \
-    wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && \
-    apt-get update && \
-    apt-get install -y postgresql-client-17 && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y postgresql-client
 
 COPY elt_script.py .
 
 CMD ["python", "elt_script.py"]
-</file>
-
-<file path="elt_script.py">
-import subprocess
-import time
-
-
-def wait_for_postgres(host, max_retries=5, delay_seconds=5):
-    """Wait for PostgreSQL to become available."""
-    retries = 0
-    while retries < max_retries:
-        try:
-            result = subprocess.run(
-                ["pg_isready", "-h", host], check=True, capture_output=True, text=True)
-            if "accepting connections" in result.stdout:
-                print("Successfully connected to PostgreSQL!")
-                return True
-        except subprocess.CalledProcessError as e:
-            print(f"Error connecting to PostgreSQL: {e}")
-            retries += 1
-            print(
-                f"Retrying in {delay_seconds} seconds... (Attempt {retries}/{max_retries})")
-            time.sleep(delay_seconds)
-    print("Max retries reached. Exiting.")
-    return False
-
-
-# Use the function before running the ELT process
-if not wait_for_postgres(host="source_postgres"):
-    exit(1)
-
-print("Starting ELT script...")
-
-# Configuration for the source PostgreSQL database
-source_config = {
-    'dbname': 'source_db',
-    'user': 'postgres',
-    'password': 'secret',
-    # Use the service name from docker-compose as the hostname
-    'host': 'source_postgres'
-}
-
-# Configuration for the destination PostgreSQL database
-destination_config = {
-    'dbname': 'destination_db',
-    'user': 'postgres',
-    'password': 'secret',
-    # Use the service name from docker-compose as the hostname
-    'host': 'destination_postgres'
-}
-
-# Use pg_dump to dump the source database to a SQL file
-dump_command = [
-    'pg_dump',
-    '-h', source_config['host'],
-    '-U', source_config['user'],
-    '-d', source_config['dbname'],
-    '-f', 'data_dump.sql',
-    '-w'  # Do not prompt for password
-]
-
-# Set the PGPASSWORD environment variable to avoid password prompt
-subprocess_env = dict(PGPASSWORD=source_config['password'])
-
-# Execute the dump command
-subprocess.run(dump_command, env=subprocess_env, check=True)
-
-# Use psql to load the dumped SQL file into the destination database
-load_command = [
-    'psql',
-    '-h', destination_config['host'],
-    '-U', destination_config['user'],
-    '-d', destination_config['dbname'],
-    '-a', '-f', 'data_dump.sql'
-]
-
-# Set the PGPASSWORD environment variable for the destination database
-subprocess_env = dict(PGPASSWORD=destination_config['password'])
-
-# Execute the load command
-subprocess.run(load_command, env=subprocess_env, check=True)
-
-print("Ending ELT script...")
 </file>
 
 </files>
