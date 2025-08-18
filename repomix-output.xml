@@ -41,10 +41,13 @@ The content is organized as follows:
 
 <directory_structure>
 custom_postgres/
+  macros/
+    film_ratings_macro.sql
+    ratings_macro.sql
   models/
     example/
       actors.sql
-      film_actos.sql
+      film_actors.sql
       film_ratings.sql
       films.sql
       schema.yml
@@ -63,11 +66,19 @@ docker-compose.yml
 <files>
 This section contains the contents of the repository's files.
 
-<file path="custom_postgres/models/example/film_actos.sql">
-SELECT * FROM  {{ source('destination_db','film_actors') }}
+<file path="custom_postgres/macros/ratings_macro.sql">
+{{% generate_ratings() %}}
+        CASE 
+            WHEN user_rating >= 4.5 THEN 'Excellent'
+            WHEN user_rating >= 4.0 THEN 'Good'
+            WHEN user_rating >= 3.0 THEN 'Average'
+            ELSE 'Poor'
+        END as rating_category
+{{  endmacro }}
 </file>
 
-<file path="custom_postgres/models/example/film_ratings.sql">
+<file path="custom_postgres/macros/film_ratings_macro.sql">
+{% macro generate_film_ratings() %}
 WITH film_with_ratings AS (
     SELECT
         film_id,
@@ -76,13 +87,8 @@ WITH film_with_ratings AS (
         price,
         rating,
         user_rating,
-        CASE 
-            WHEN user_rating >= 4.5 THEN 'Excellent'
-            WHEN user_rating >= 4.0 THEN 'Good'
-            WHEN user_rating >= 3.0 THEN 'Average'
-            ELSE 'Poor'
-        END as rating_category
-    FROM {{ ref('films')}}
+        {{ generate_ratings()}}
+    FROM {{ ref('films') }}
 ),
 
 films_with_actors AS (
@@ -90,9 +96,9 @@ films_with_actors AS (
         f.film_id,
         f.title,
         STRING_AGG(a.actor_name, ',') as actors
-    FROM {{ ref('films')}} f 
-    LEFT JOIN {{ ref('film_actors')}} fa ON f.film_id = fa.film_id
-    LEFT JOIN {{ ref('actors')}} a ON fa.actor_id = a.actor_id
+    FROM {{ ref('films') }} f 
+    LEFT JOIN {{ ref('film_actors') }} fa ON f.film_id = fa.film_id
+    LEFT JOIN {{ ref('actors') }} a ON fa.actor_id = a.actor_id
     GROUP BY f.film_id, f.title
 )
 
@@ -100,7 +106,8 @@ SELECT
     fwr.*,
     fwa.actors
 FROM film_with_ratings fwr
-LEFT JOIN films_with_actors fwa ON fwr.film_id = fwa.film_id;
+LEFT JOIN films_with_actors fwa ON fwr.film_id = fwa.film_id
+{% endmacro %}
 </file>
 
 <file path="custom_postgres/.gitignore">
@@ -373,6 +380,14 @@ INSERT INTO film_actors (film_id, actor_id) VALUES
 SELECT * FROM  {{ source('destination_db','actors') }}
 </file>
 
+<file path="custom_postgres/models/example/film_actors.sql">
+SELECT * FROM  {{ source('destination_db','film_actors') }}
+</file>
+
+<file path="custom_postgres/models/example/film_ratings.sql">
+{{ generate_film_ratings() }}
+</file>
+
 <file path="custom_postgres/models/example/films.sql">
 SELECT * FROM  {{ source('destination_db','films') }}
 </file>
@@ -503,6 +518,7 @@ sources:
 # name or the intended use of these models
 name: 'custom_postgres'
 version: '1.0.0'
+config-version: 2
 
 # This setting configures which "profile" dbt uses for this project.
 profile: 'custom_postgres'
