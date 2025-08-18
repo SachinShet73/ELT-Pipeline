@@ -101,3 +101,94 @@ Happy modeling!
 [0m05:17:33.385608 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000287EBCBAC40>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000287EBC9A8D0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000287EAA6B9B0>]}
 [0m05:17:33.385837 [debug] [MainThread]: Flushing usage events
 [0m05:17:34.367122 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m14:55:27.474832 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x105833620>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x106d339d0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x106d33b10>]}
+
+
+============================== 14:55:27.479421 | f420f8be-c453-485f-aee7-74b904ed5066 ==============================
+[0m14:55:27.479421 [info ] [MainThread]: Running with dbt=1.10.9
+[0m14:55:27.479867 [debug] [MainThread]: running dbt with arguments {'log_format': 'default', 'static_parser': 'True', 'write_json': 'True', 'debug': 'False', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'empty': 'None', 'indirect_selection': 'eager', 'use_colors': 'True', 'cache_selected_only': 'False', 'target_path': 'None', 'version_check': 'True', 'send_anonymous_usage_stats': 'True', 'fail_fast': 'False', 'printer_width': '80', 'log_cache_events': 'False', 'partial_parse': 'True', 'profiles_dir': '/Users/sachinshet/.dbt', 'invocation_command': 'dbt init', 'introspect': 'True', 'use_experimental_parser': 'False', 'warn_error': 'None', 'log_path': 'logs', 'no_print': 'None', 'quiet': 'False'}
+[0m14:55:27.495777 [info ] [MainThread]: Creating dbt configuration folder at /Users/sachinshet/.dbt
+[0m14:55:40.363711 [info ] [MainThread]: A project called custom_postgres already exists here.
+[0m14:55:40.401209 [debug] [MainThread]: Resource report: {"command_name": "init", "command_success": true, "command_wall_clock_time": 12.986874, "process_in_blocks": "0", "process_kernel_time": 0.190572, "process_mem_max_rss": "106774528", "process_out_blocks": "0", "process_user_time": 0.936875}
+[0m14:55:40.402033 [debug] [MainThread]: Command `dbt init` succeeded at 14:55:40.401917 after 12.99 seconds
+[0m14:55:40.402473 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x106df4510>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x106df1b50>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x106bed7b0>]}
+[0m14:55:40.402838 [debug] [MainThread]: Flushing usage events
+[0m14:55:40.494731 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m14:56:03.723093 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x107203620>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x11200b9d0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x11200bb10>]}
+
+
+============================== 14:56:03.727564 | 3cf5faff-166d-4dd8-b593-5bf970afb68f ==============================
+[0m14:56:03.727564 [info ] [MainThread]: Running with dbt=1.10.9
+[0m14:56:03.728018 [debug] [MainThread]: running dbt with arguments {'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'introspect': 'True', 'static_parser': 'True', 'empty': 'None', 'use_colors': 'True', 'target_path': 'None', 'indirect_selection': 'eager', 'log_cache_events': 'False', 'printer_width': '80', 'quiet': 'False', 'cache_selected_only': 'False', 'partial_parse': 'True', 'log_path': 'logs', 'version_check': 'True', 'debug': 'False', 'profiles_dir': '/Users/sachinshet/.dbt', 'write_json': 'True', 'use_experimental_parser': 'False', 'send_anonymous_usage_stats': 'True', 'fail_fast': 'False', 'warn_error': 'None', 'log_format': 'default', 'no_print': 'None', 'invocation_command': 'dbt init'}
+[0m14:56:10.718784 [debug] [MainThread]: Starter project path: /Users/sachinshet/Desktop/ELT-Pipeline/env/lib/python3.13/site-packages/dbt/include/starter_project
+[0m14:56:10.736899 [info ] [MainThread]: 
+Your new dbt project "custom_postgres" was created!
+
+For more information on how to configure the profiles.yml file,
+please consult the dbt documentation here:
+
+  https://docs.getdbt.com/docs/configure-your-profile
+
+One more thing:
+
+Need help? Don't hesitate to reach out to us via GitHub issues or on Slack:
+
+  https://community.getdbt.com/
+
+Happy modeling!
+
+[0m14:56:10.737501 [info ] [MainThread]: Setting up your profile.
+[0m15:11:14.422876 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x107bf3620>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x11970b9d0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x11970bb10>]}
+
+
+============================== 15:11:14.425629 | 13b3f5c5-995c-45f0-a067-6ea6fcd48b3c ==============================
+[0m15:11:14.425629 [info ] [MainThread]: Running with dbt=1.10.9
+[0m15:11:14.425900 [debug] [MainThread]: running dbt with arguments {'cache_selected_only': 'False', 'partial_parse': 'True', 'send_anonymous_usage_stats': 'True', 'quiet': 'False', 'no_print': 'None', 'indirect_selection': 'eager', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'use_experimental_parser': 'False', 'use_colors': 'True', 'log_cache_events': 'False', 'target_path': 'None', 'log_path': 'logs', 'empty': 'None', 'introspect': 'True', 'debug': 'False', 'warn_error': 'None', 'printer_width': '80', 'version_check': 'True', 'static_parser': 'True', 'profiles_dir': '/Users/sachinshet/.dbt', 'invocation_command': 'dbt init', 'fail_fast': 'False', 'write_json': 'True', 'log_format': 'default'}
+[0m15:11:22.026569 [debug] [MainThread]: Starter project path: /Users/sachinshet/Desktop/ELT-Pipeline/env/lib/python3.13/site-packages/dbt/include/starter_project
+[0m15:11:22.039281 [info ] [MainThread]: 
+Your new dbt project "custom_postgres" was created!
+
+For more information on how to configure the profiles.yml file,
+please consult the dbt documentation here:
+
+  https://docs.getdbt.com/docs/configure-your-profile
+
+One more thing:
+
+Need help? Don't hesitate to reach out to us via GitHub issues or on Slack:
+
+  https://community.getdbt.com/
+
+Happy modeling!
+
+[0m15:11:22.040041 [info ] [MainThread]: Setting up your profile.
+[0m15:18:21.720361 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x10372b620>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x104c2b9d0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x104c2bb10>]}
+
+
+============================== 15:18:21.722654 | 4a118819-9b44-4374-8645-a3ea4aaa8faa ==============================
+[0m15:18:21.722654 [info ] [MainThread]: Running with dbt=1.10.9
+[0m15:18:21.722887 [debug] [MainThread]: running dbt with arguments {'static_parser': 'True', 'invocation_command': 'dbt init', 'profiles_dir': '/Users/sachinshet/.dbt', 'log_path': 'logs', 'printer_width': '80', 'indirect_selection': 'eager', 'send_anonymous_usage_stats': 'True', 'write_json': 'True', 'warn_error': 'None', 'quiet': 'False', 'target_path': 'None', 'log_cache_events': 'False', 'version_check': 'True', 'empty': 'None', 'introspect': 'True', 'debug': 'False', 'cache_selected_only': 'False', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'fail_fast': 'False', 'use_experimental_parser': 'False', 'use_colors': 'True', 'no_print': 'None', 'partial_parse': 'True', 'log_format': 'default'}
+[0m15:18:28.622316 [debug] [MainThread]: Starter project path: /Users/sachinshet/Desktop/ELT-Pipeline/env/lib/python3.13/site-packages/dbt/include/starter_project
+[0m15:18:28.634054 [info ] [MainThread]: 
+Your new dbt project "custom_postgres" was created!
+
+For more information on how to configure the profiles.yml file,
+please consult the dbt documentation here:
+
+  https://docs.getdbt.com/docs/configure-your-profile
+
+One more thing:
+
+Need help? Don't hesitate to reach out to us via GitHub issues or on Slack:
+
+  https://community.getdbt.com/
+
+Happy modeling!
+
+[0m15:18:28.634987 [info ] [MainThread]: Setting up your profile.
+[0m15:20:22.962626 [info ] [MainThread]: Profile custom_postgres written to /Users/sachinshet/.dbt/profiles.yml using target's profile_template.yml and your supplied values. Run 'dbt debug' to validate the connection.
+[0m15:20:22.970256 [debug] [MainThread]: Resource report: {"command_name": "init", "command_success": true, "command_wall_clock_time": 121.27603, "process_in_blocks": "0", "process_kernel_time": 0.100612, "process_mem_max_rss": "108904448", "process_out_blocks": "0", "process_user_time": 0.493648}
+[0m15:20:22.972285 [debug] [MainThread]: Command `dbt init` succeeded at 15:20:22.971973 after 121.28 seconds
+[0m15:20:22.973377 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x104cee9e0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x1045e1010>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x104d1caf0>]}
+[0m15:20:22.974057 [debug] [MainThread]: Flushing usage events
+[0m15:20:23.095017 [debug] [MainThread]: An error was encountered while trying to flush usage events
