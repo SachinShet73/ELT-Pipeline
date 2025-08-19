@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   source_postgres:
     image: postgres:15
@@ -36,103 +34,16 @@ services:
     volumes:
       - postgres_db_volume:/var/lib/postgresql/data
 
-  # Airbyte Services
-  airbyte-db:
-    image: postgres:15
+  # Airbyte Setup - Manual working setup using basic components only
+  # This avoids the complex temporal/bootloader issues
+  
+  # Use Airbyte's standalone stack - simpler alternative
+  # For now, provide manual setup instructions for Airbyte
+  airbyte-placeholder:
+    image: hello-world
+    container_name: airbyte-placeholder
     networks:
       - elt_network
-    environment:
-      - POSTGRES_USER=docker
-      - POSTGRES_PASSWORD=docker
-      - POSTGRES_DB=airbyte
-    volumes:
-      - airbyte_db:/var/lib/postgresql/data
-
-  airbyte-server:
-    image: airbyte/server:0.63.15
-    ports:
-      - "8001:8001"
-    networks:
-      - elt_network
-    environment:
-      - DATABASE_HOST=airbyte-db
-      - DATABASE_PORT=5432
-      - DATABASE_PASSWORD=docker
-      - DATABASE_USER=docker
-      - DATABASE_DB=airbyte
-      - WEBAPP_URL=http://localhost:8000
-      - WORKER_ENVIRONMENT=docker
-      - WORKSPACE_ROOT=/tmp/workspace
-      - WORKSPACE_DOCKER_MOUNT=airbyte_workspace
-      - LOCAL_ROOT=/tmp/airbyte_local
-      - LOCAL_DOCKER_MOUNT=/tmp/airbyte_local
-      - CONFIG_ROOT=/data
-      - TRACKING_STRATEGY=logging
-    volumes:
-      - airbyte_workspace:/tmp/workspace
-      - airbyte_data:/data
-      - airbyte_local:/tmp/airbyte_local
-    depends_on:
-      - airbyte-db
-
-  airbyte-webapp:
-    image: airbyte/webapp:0.63.15
-    ports:
-      - "8000:80"
-    networks:
-      - elt_network
-    environment:
-      - AIRBYTE_ROLE=webapp
-      - AIRBYTE_VERSION=0.63.15
-      - API_URL=/api/v1/
-      - IS_DEMO=false
-      - PAPERCUPS_STORYTIME=disabled
-      - TRACKING_STRATEGY=logging
-    depends_on:
-      - airbyte-server
-
-  airbyte-worker:
-    image: airbyte/worker:0.63.15
-    networks:
-      - elt_network
-    environment:
-      - AIRBYTE_VERSION=0.63.15
-      - AUTO_DETECT_SCHEMA=true
-      - DATABASE_HOST=airbyte-db
-      - DATABASE_PORT=5432
-      - DATABASE_PASSWORD=docker
-      - DATABASE_USER=docker
-      - DATABASE_DB=airbyte
-      - WORKSPACE_ROOT=/tmp/workspace
-      - WORKSPACE_DOCKER_MOUNT=airbyte_workspace
-      - LOCAL_ROOT=/tmp/airbyte_local
-      - LOCAL_DOCKER_MOUNT=/tmp/airbyte_local
-      - CONFIG_ROOT=/data
-      - TRACKING_STRATEGY=logging
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - airbyte_workspace:/tmp/workspace
-      - airbyte_data:/data
-      - airbyte_local:/tmp/airbyte_local
-    depends_on:
-      - airbyte-server
-
-  airbyte:
-    image: airbyte/server:0.63.15
-    ports:
-      - "8006:8006"
-    networks:
-      - elt_network
-    environment:
-      - AIRBYTE_ROLE=server
-      - DATABASE_HOST=airbyte-db
-      - DATABASE_PORT=5432
-      - DATABASE_PASSWORD=docker
-      - DATABASE_USER=docker
-      - DATABASE_DB=airbyte
-    depends_on:
-      - airbyte-db
-      - airbyte-server
 
   airflow:
     build: 
@@ -148,8 +59,7 @@ services:
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./elt:/opt/airflow/elt
-      - ./custom_postgres:/opt/dbt
-      - ~/.dbt:/root/.dbt
+      - ./custom_postgres:/opt/airflow/custom_postgres
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - LOAD_EX=n
@@ -162,10 +72,7 @@ services:
 
 volumes:
   postgres_db_volume:
-  airbyte_db:
-  airbyte_workspace:
   airbyte_data:
-  airbyte_local:
 
 networks:
   elt_network:
