@@ -12,8 +12,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: secret
     volumes:
-      
-       - ./source_db_init/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./source_db_init/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   destination_postgres:
     image: postgres:15
@@ -26,37 +25,45 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: secret
 
-  elt_script:
-    build:
-      context: ./elt
-      dockerfile: Dockerfile
-    command: ["python", "elt_script.py"]
+  postgres:
+    image: postgres:15
     networks:
       - elt_network
-    depends_on:
-      - source_postgres
-      - destination_postgres
-
-  dbt:
-    image: ghcr.io/dbt-labs/dbt-postgres:1.4.7
-    command:
-      [
-        "run",
-        "--profiles-dir",
-        "/root/.dbt",
-        "--project-dir",
-        "/dbt"
-      ]
-    volumes:
-      - ./custom_postgres:/dbt      
-      - ~/.dbt:/root/.dbt             
-    networks:
-      - elt_network
-    depends_on:
-      - elt_script 
     environment:
-       DBT_PROFILE : default
-       DBT_TARGET : dev
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    volumes:
+      - postgres_db_volume:/var/lib/postgresql/data
+
+  airflow:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    user: root
+    depends_on:
+      - postgres
+    networks:
+      - elt_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./elt:/opt/airflow/elt
+      - ./custom_postgres:/opt/dbt
+      - ~/.dbt:/root/.dbt
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - LOAD_EX=n
+      - EXECUTOR=Local
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW__CORE__FERNET_KEY=mjWiVpufCtoTLmthnugkJ0xhRBb9MUlBqmvjIuJi3Lc=
+    ports:
+      - "8080:8080"
+    command: bash -c "sleep 10 && airflow db reset --yes && airflow users create --username airflow --password password --firstname Sachin --lastname Shet --role Admin --email sachin@example.com && airflow standalone"
+
+volumes:
+  postgres_db_volume:
 
 networks:
   elt_network:

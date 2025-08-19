@@ -40,6 +40,9 @@ The content is organized as follows:
 </file_summary>
 
 <directory_structure>
+airflow/
+  dags/
+    etl_dag.py
 custom_postgres/
   macros/
     film_ratings_macro.sql
@@ -52,7 +55,7 @@ custom_postgres/
       films.sql
       schema.yml
       sources.yml
-    specific_movie.sql
+      specific_movie.sql
   .gitignore
   dbt_project.yml
   README.md
@@ -62,17 +65,75 @@ elt/
 source_db_init/
   init.sql
 docker-compose.yml
+Dockerfile
+start.sh
 </directory_structure>
 
 <files>
 This section contains the contents of the repository's files.
 
-<file path="custom_postgres/models/specific_movie.sql">
-{% set film_title = 'Dunkirk' %}
+<file path="airflow/dags/etl_dag.py">
+from datetime import datetime, timedelta
+from airflow import DAG
+from docker.types import Mount
+from airflow.operators.python import PythonOperator
+from airflow.operators.bash import BashOperator
+from airflow.providers.docker.operators.docker import DockerOperator
+import subprocess
 
-SELECT *
-FROM {{ ref('films')}}
-WHERE title = '{{ film_title }}'
+default_args = {
+    'owner': 'airflow',
+    'depends_on_past': False,
+    'email_on_failure': False,
+    'email_on_retry': False,
+}
+
+def run_elt_script():
+    script_path = "/opt/airflow/elt/elt_script.py"
+    result = subprocess.run(["python", script_path], capture_output=True, text=True)
+
+    if result.returncode != 0:
+        raise Exception(f"Script failed with error: {result.stderr}")
+    else:
+        print(result.stdout)
+
+dag = DAG(
+    'elt_and_dbt',
+    default_args=default_args,
+    description='An ELT workflow with dbt',
+    start_date=datetime(2025, 8, 19),
+    catchup=False
+)
+
+t1 = PythonOperator(
+    task_id="run_elt_script",
+    python_callable=run_elt_script,
+    dag=dag
+)
+
+t2 = DockerOperator(
+    task_id="dbt_run",
+    image='ghcr.io/dbt-labs/dbt-postgres:1.4.7',
+    command=[
+        "run",
+        "--profiles-dir",
+        "/root",
+        "--project-dir",
+        "/dbt"
+    ],
+    auto_remove=True,
+    docker_url='unix://var/run/docker.sock',
+    network_mode="bridge",
+    mounts=[
+        Mount(source='/Users/sachinshet/Desktop/ELT-Pipeline/custom_postgres',
+              target='/dbt', type='bind'),
+        Mount(source='/Users/sachinshet/Desktop/ELT-Pipeline/custom_postgres',
+              target='/root', type='bind') 
+    ],
+    dag=dag
+)
+
+t1 >> t2
 </file>
 
 <file path="custom_postgres/macros/ratings_macro.sql">
@@ -84,6 +145,14 @@ WHERE title = '{{ film_title }}'
             ELSE 'Poor'
         END as rating_category
 {% endmacro %}
+</file>
+
+<file path="custom_postgres/models/example/specific_movie.sql">
+{% set film_title = 'Dunkirk' %}
+
+SELECT *
+FROM {{ ref('films')}}
+WHERE title = '{{ film_title }}'
 </file>
 
 <file path="custom_postgres/.gitignore">
@@ -108,6 +177,12 @@ Try running the following commands:
 - Join the [chat](https://community.getdbt.com/) on Slack for live discussions and support
 - Find [dbt events](https://events.getdbt.com) near you
 - Check out [the blog](https://blog.getdbt.com/) for the latest news on dbt's development and best practices
+</file>
+
+<file path="start.sh">
+cron & 
+
+python /app/elt_script.py
 </file>
 
 <file path="custom_postgres/macros/film_ratings_macro.sql">
@@ -521,6 +596,12 @@ sources:
         description: "Mapping between films and actors."
 </file>
 
+<file path="Dockerfile">
+FROM apache/airflow:2.7.0
+
+RUN pip install apache-airflow-providers-docker=3.7.0
+</file>
+
 <file path="custom_postgres/dbt_project.yml">
 # Name your project! Project names should contain only lowercase characters
 # and underscores. A good package name should reflect your organization's
@@ -564,9 +645,13 @@ models:
 FROM python:3.8-slim
 
 # Install PostgreSQL 17 client tools
-RUN apt-get update && apt-get install -y postgresql-client
+RUN apt-get update && apt-get install -y postgresql-client cron
 
+COPY start.sh /app/start.sh
 COPY elt_script.py .
+
+WORKDIR /app
+RUN echo "0 3 *  *  * python /app/elt_script.py" | crontab -
 
 CMD ["python", "elt_script.py"]
 </file>
@@ -600,37 +685,116 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: secret
 
-  elt_script:
-    build:
-      context: ./elt
-      dockerfile: Dockerfile
-    command: ["python", "elt_script.py"]
-    networks:
-      - elt_network
-    depends_on:
-      - source_postgres
-      - destination_postgres
+  # elt_script:
+  #   build:
+  #     context: ./elt
+  #     dockerfile: Dockerfile
+  #   command: ["python", "elt_script.py"]
+  #   networks:
+  #     - elt_network
+  #   depends_on:
+  #     - source_postgres
+  #     - destination_postgres
 
-  dbt:
-    image: ghcr.io/dbt-labs/dbt-postgres:1.4.7
-    command:
-      [
-        "run",
-        "--profiles-dir",
-        "/root/.dbt",
-        "--project-dir",
-        "/dbt"
-      ]
-    volumes:
-      - ./custom_postgres:/dbt      
-      - ~/.dbt:/root/.dbt             
+  # dbt:
+  #   image: ghcr.io/dbt-labs/dbt-postgres:1.4.7
+  #   command:
+  #     [
+  #       "run",
+  #       "--profiles-dir",
+  #       "/root/.dbt",
+  #       "--project-dir",
+  #       "/dbt"
+  #     ]
+  #   volumes:
+  #     - ./custom_postgres:/dbt      
+  #     - ~/.dbt:/root/.dbt             
+  #   networks:
+  #     - elt_network
+  #   depends_on:
+  #     - elt_script 
+  #   environment:
+  #      DBT_PROFILE : default
+  #      DBT_TARGET : dev
+
+  postgres:
+    image: postgres:15
     networks:
       - elt_network
-    depends_on:
-      - elt_script 
     environment:
-       DBT_PROFILE : default
-       DBT_TARGET : dev
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+
+  init-airflow:
+    image: apache/airflow:2.7.0
+    depends_on:
+      - postgres
+    networks:
+      - elt_network
+    environment:
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+    command: >
+      bash -c "airflow db reset --yes &&
+             airflow db migrate &&
+             airflow users create --username airflow --password password --firstname Sachin --lastname Shet --role Admin --email sachin@example.com"
+  webserver:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    user: root
+    depends_on:
+      - postgres
+    networks:
+      - elt_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./elt:/opt/airflow/elt
+      - ./custom_postgres:/opt/dbt
+      - ~/.dbt:/root/.dbt
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - LOAD_EX=n
+      - EXECUTOR=Local
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW_CORE_FERNET_KEY=mjWiVpufCtoTLmthnugkJ0xhRBb9MUlBqmvjIuJi3Lc=
+      - AIRFLOW__WEBSERVER__DEFAULT_USER_USERNAME=airflow
+      - AIRFLOW__WEBSERVER__DEFAULT_USER_PASSWORD=password
+      - AIRFLOW_WWW_USER_USERNAME=airflow
+      - AIRFLOW__WWW__DEFAULT_USER_PASSWORD=password
+    ports:
+      - "8080:8080"
+    command: standalone
+
+  scheduler:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    user: root
+    depends_on:
+      - init-airflow
+    networks:
+      - elt_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./elt:/opt/airflow/elt
+      - ./custom_postgres:/opt/dbt
+      - ~/.dbt:/root/.dbt
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - LOAD_EX=n
+      - EXECUTOR=Local
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW_CORE_FERNET_KEY=mjWiVpufCtoTLmthnugkJ0xhRBb9MUlBqmvjIuJi3Lc=
+      - AIRFLOW__WEBSERVER__DEFAULT_USER_USERNAME=airflow
+      - AIRFLOW__WEBSERVER__DEFAULT_USER_PASSWORD=password
+      - AIRFLOW_WWW_USER_USERNAME=airflow
+      - AIRFLOW__WWW__DEFAULT_USER_PASSWORD=secret
+    command: scheduler
 
 networks:
   elt_network:
